@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../data-quality"
+		},
+		{
+			"path": "../../../massive-autoformalization-maf"
+		}
+	],
+	"settings": {}
+}
