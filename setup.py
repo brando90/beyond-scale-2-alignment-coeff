@@ -30,7 +30,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://github.com/brando90/beyond-scale-2-alignment-coeff',
-    author='cBrando Miranda & Krrish Chawla',
+    author='Brando Miranda & Krrish Chawla',
     author_email='brando9@stanford.edu',
     python_requires='>=3.10.11',
     license='Apache 2.0',

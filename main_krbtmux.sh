@@ -1,4 +1,4 @@
-#!/bin/bash
+tttt#!/bin/bash
 # - snap: https://ilwiki.stanford.edu/doku.php?id=snap-servers:snap-servers and support il-action@cs.stanford.edu
 # - live server stats: https://ilwiki.stanford.edu/doku.php?id=snap-servers:snap-gpu-servers-stats
 #8 a100 80GB

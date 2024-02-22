@@ -177,6 +177,7 @@ def get_data_from_hf_dataset(dataset,
     """ Gets data from a HF dataset, it's usually an iterator object e.g., some ds.map(fn, batched=True, remove_columns=remove_columns) has been applied. 
     Handles both streaming and non-streaming datasets, take for streaming and select for non-streaming.
     """
+    # streaming = ataset.streaming  # TODO perhaps improvement
     # sample_data = dataset.select(range(batch_size)) if not isinstance(dataset, datasets.iterable_dataset.IterableDataset) else dataset.take(batch_size)
     batch = dataset.take(batch_size) if streaming else dataset.select(random.sample(list(range(len(dataset))), batch_size))
     return batch
