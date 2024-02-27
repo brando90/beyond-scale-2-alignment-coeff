@@ -34,7 +34,7 @@ import math
 import sys
 from training.reinit_and_smaller_llama2 import get_deafult_smallest_baby_llama2_v1_36m_0p036b, get_weight_norms, reinitialize_weights_gpt_neox_20B_inspired_4_llama2, get_full_llama7b_reinit
 sys.path = [''] + sys.path
-from training.utils import eval_hf, eval_hf_with_subsample, get_column_names, get_data_from_hf_dataset, group_texts, raw_dataset_2_lm_data
+from training.utils import eval_hf, eval_hf_with_subsample, get_column_names, get_data_from_hf_dataset, group_texts, raw_dataset_2_lm_data, get_data_from_hf_dataset2
 
 # -- Experiments 
 
@@ -84,25 +84,26 @@ def train():
     import wandb
     # - Dryrun
     mode = 'dryrun'; seed = 0; report_to = 'none'
-    mode = 'online'; seed = 0; report_to = 'wandb'
+    # mode = 'online'; seed = 0; report_to = 'wandb'
 
     # -- Train data sets
     # path, name, data_files, split = ['c4'], ['en'], [None], ['train']
     # - UDACA's
-    path, name, data_files, split = ['UDACA/PileSubsets'], ['uspto'], [None], ['train']
-    path, name, data_files, split = ['UDACA/PileSubsets'], ['pubmed'], [None], ['train']
-    path, name, data_files, split = ['UDACA/PileSubsets', 'UDACA/PileSubsets'], ['uspto', 'pubmed'], [None, None], ['train', 'train']
+    # path, name, data_files, split = ['UDACA/PileSubsets'], ['uspto'], [None], ['train']
+    # path, name, data_files, split = ['UDACA/PileSubsets'], ['pubmed'], [None], ['train']
+    # path, name, data_files, split = ['UDACA/PileSubsets', 'UDACA/PileSubsets'], ['uspto', 'pubmed'], [None, None], ['train', 'train']
+    path, name, data_files, split = ['UDACA/AF'], [None], [None], ['train']
     # - models
-    # pretrained_model_name_or_path = 'gpt2'  # this is the smallest model gpt2, 124M params https://huggingface.co/gpt2 
+    pretrained_model_name_or_path = 'gpt2'  # this is the smallest model gpt2, 124M params https://huggingface.co/gpt2 
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-7b-hf'
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-13b-hf'
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-70b-hf'
     # pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
     # pretrained_model_name_or_path = 'baby_llama2_v1'
-    pretrained_model_name_or_path = 'get_full_llama7b_reinit'
+    # pretrained_model_name_or_path = 'get_full_llama7b_reinit'
     # - important training details or it wont run, mem issues maybe
     max_steps = 2
-    # max_steps = 300
+    # max_steps = ? # --> number of steps for fair token comparison for each data set
     # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
     # max_steps = 1_553  # 22-24hs llama2 full reinit 4*8=32=B 1024=L for 6.3M tokens
     # max_steps = 3_000  # 2.75729 days rate=79.41secs/it toks=49.1M
@@ -229,20 +230,11 @@ def train():
     print(f'{probabilities=}')
     # - Get raw train data set
     raw_train_datasets = interleave_datasets(train_datasets, probabilities)
-    # -TODO replace bellow with raw_dataset_2_lm_data(...)
-    remove_columns = get_column_names(raw_train_datasets)  # remove all keys that are not tensors to avoid bugs in collate function in task2vec's pytorch data loader
-    # - Get tokenized train data set
-    # Note: Setting `batched=True` in the `dataset.map` function of Hugging Face's datasets library processes the data in batches rather than one item at a time, significantly speeding up the tokenization and preprocessing steps.
-    tokenize_function = lambda examples: tokenizer(examples["text"])
-    tokenized_train_datasets = raw_train_datasets.map(tokenize_function, batched=True, remove_columns=remove_columns)
-    _group_texts = lambda examples : group_texts(examples, block_size)
-    # - Get actual data set for lm training (in this case each seq is of length block_size, no need to worry about pad = eos since we are filling each sequence)
-    lm_train_dataset = tokenized_train_datasets.map(_group_texts, batched=True)
-    batch = get_data_from_hf_dataset(lm_train_dataset, streaming=streaming, batch_size=batch_size)
-    print(f'{len(next(iter(batch))["input_ids"])=}')
-    assert all(len(data_dict['input_ids']) == block_size for data_dict in iter(batch)), f'Error, some seq in batch are not of length {block_size}'
+    current_dataset_size = 4000
+    raw_train_datasets_subset = get_data_from_hf_dataset2(raw_train_datasets, streaming, batch_size=current_dataset_size)
+    # TODO: once we've figured out how to take only from the indices we want (assuming idx_min is computed), then going forward the data set will only train on that num of tokens
+    lm_train_dataset = raw_dataset_2_lm_data(raw_train_datasets_subset, tokenizer, block_size)
     train_dataset = lm_train_dataset
-    # -TODO replace upt to here
 
     # -- max steps manually decided depending on how many tokens we want to train on
     per_device_train_batch_size = batch_size

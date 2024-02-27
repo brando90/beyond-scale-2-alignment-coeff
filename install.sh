@@ -24,26 +24,26 @@ python -c "import torch; print(torch.__version__); print(torch.version.cuda); pr
 python -c "import torch; print(torch.version.cuda); print((torch.randn(2, 4).cuda() @ torch.randn(4, 1).cuda()))"
 python -c "import torch; print(f'{torch.cuda.device_count()=}'); print(f'Device: {torch.cuda.get_device_name(0)=}')"
 
-# -- Install uutils from source
-# - Get the code, put it in afs so its available to all machines and symlink it to home in the local machine
-cd /afs/cs.stanford.edu/u/brando9/
-git clone git@github.com:brando90/ultimate-utils.git $HOME/ultimate-utils/
-ln -s /afs/cs.stanford.edu/u/brando9/ultimate-utils $HOME/ultimate-utils
-# - Install the library in editable mode so that changes are reflected immediately in running code
-pip install -e ~/ultimate-utils
-#pip uninstall ~/ultimate-utils
+# # -- Install uutils from source
+# # - Get the code, put it in afs so its available to all machines and symlink it to home in the local machine
+# cd /afs/cs.stanford.edu/u/brando9/
+# git clone git@github.com:brando90/ultimate-utils.git $HOME/ultimate-utils/
+# ln -s /afs/cs.stanford.edu/u/brando9/ultimate-utils $HOME/ultimate-utils
+# # - Install the library in editable mode so that changes are reflected immediately in running code
+# pip install -e ~/ultimate-utils
+# #pip uninstall ~/ultimate-utils
+# # - Test uutils
+# python -c "import uutils; uutils.torch_uu.gpu_test()"
 
-# -- Install ultimate-anatome
-# - Get the code, put it in afs so its available to all machines and symlink it to home in the local machine
-cd /afs/cs.stanford.edu/u/brando9/
-git clone git@github.com:brando90/ultimate-anatome.git $HOME/ultimate-anatome/
-ln -s /afs/cs.stanford.edu/u/brando9/ultimate-anatome $HOME/ultimate-anatome
-# - Install the library in editable mode so that changes are reflected immediately in running code
-pip install -e ~/ultimate-anatome
-#pip uninstall ~/ultimate-anatome
-
-# - Test uutils
-python -c "import uutils; uutils.torch_uu.gpu_test()"
+# # -- Install ultimate-anatome
+# # - Get the code, put it in afs so its available to all machines and symlink it to home in the local machine
+# cd /afs/cs.stanford.edu/u/brando9/
+# git clone git@github.com:brando90/ultimate-anatome.git $HOME/ultimate-anatome/
+# ln -s /afs/cs.stanford.edu/u/brando9/ultimate-anatome $HOME/ultimate-anatome
+# # - Install the library in editable mode so that changes are reflected immediately in running code
+# #cd ~/ultimate-anatome
+# pip install -e ~/ultimate-anatome
+# #pip uninstall ~/ultimate-anatome
 
 # -- Wandb
 pip install wandb --upgrade
