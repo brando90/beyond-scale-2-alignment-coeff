@@ -167,22 +167,6 @@ def get_column_names(dataset,
         raise ValueError(f"method {method} not supported")
     return column_names
 
-def get_data_from_hf_dataset2(dataset, 
-                             streaming: bool = True, 
-                             batch_size: int = 4, 
-                            #  shuffle: bool= False, # shuffle is better but slower afaik
-                            #  seed: int = 0, 
-                            #  buffer_size: int = 500_000,
-                             ):
-    """ Gets data from a HF dataset, it's usually an iterator object e.g., some ds.map(fn, batched=True, remove_columns=remove_columns) has been applied. 
-    Handles both streaming and non-streaming datasets, take for streaming and select for non-streaming.
-
-    - we need to make sure this is determinstic (it always does 0->idx_min_num_tokens) --> batch_size == idx_min_num_tokens+1 ==> 
-    """
-    # TODO: how tod you get the first k elements form a streaming data set (maybe .take)
-    batch = dataset.take(batch_size) if streaming else dataset.select(random.sample(list(range(len(dataset))), batch_size))
-    return batch
-
 def get_data_from_hf_dataset(dataset, 
                              streaming: bool = True, 
                              batch_size: int = 4, 

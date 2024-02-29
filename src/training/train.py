@@ -34,7 +34,7 @@ import math
 import sys
 from training.reinit_and_smaller_llama2 import get_deafult_smallest_baby_llama2_v1_36m_0p036b, get_weight_norms, reinitialize_weights_gpt_neox_20B_inspired_4_llama2, get_full_llama7b_reinit
 sys.path = [''] + sys.path
-from training.utils import eval_hf, eval_hf_with_subsample, get_column_names, get_data_from_hf_dataset, group_texts, raw_dataset_2_lm_data, get_data_from_hf_dataset2
+from training.utils import eval_hf, eval_hf_with_subsample, get_column_names, get_data_from_hf_dataset, group_texts, raw_dataset_2_lm_data
 
 # -- Experiments 
 
@@ -93,6 +93,7 @@ def train():
     # path, name, data_files, split = ['UDACA/PileSubsets'], ['pubmed'], [None], ['train']
     # path, name, data_files, split = ['UDACA/PileSubsets', 'UDACA/PileSubsets'], ['uspto', 'pubmed'], [None, None], ['train', 'train']
     path, name, data_files, split = ['UDACA/AF'], [None], [None], ['train']
+    num_rows_according_to_tok_count: int = 4
     # - models
     pretrained_model_name_or_path = 'gpt2'  # this is the smallest model gpt2, 124M params https://huggingface.co/gpt2 
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-7b-hf'
@@ -101,13 +102,14 @@ def train():
     # pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
     # pretrained_model_name_or_path = 'baby_llama2_v1'
     # pretrained_model_name_or_path = 'get_full_llama7b_reinit'
+    print(f'{pretrained_model_name_or_path=}')
     # - important training details or it wont run, mem issues maybe
     max_steps = 2
     # max_steps = ? # --> number of steps for fair token comparison for each data set
     # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
     # max_steps = 1_553  # 22-24hs llama2 full reinit 4*8=32=B 1024=L for 6.3M tokens
     # max_steps = 3_000  # 2.75729 days rate=79.41secs/it toks=49.1M
-    max_steps = 30_000 # 27.5729 days rate=79.41secs/it toks=491M
+    # max_steps = 30_000 # 27.5729 days rate=79.41secs/it toks=491M
     # max_steps = 300_000 # 275.729 days rate=79.41secs/it toks=
     # max_steps = 5_000
     # max_steps = 61_036  # 3.8 days for B=32 L=512 rate=5.43secs/it for 1B=1e9tokens
@@ -146,17 +148,17 @@ def train():
     # -- Wandb
     CUDA_VISIBLE_DEVICES = os.environ.get('CUDA_VISIBLE_DEVICES')
     print(f"CUDA_VISIBLE_DEVICES = {CUDA_VISIBLE_DEVICES}")
-    num_tokens_trained = max_steps * batch_size * max_length * num_batches 
+    num_tokens_trained = max_steps * (batch_size * gradient_accumulation_steps) * max_length * num_batches 
     print(f'{num_tokens_trained=}')
     today = datetime.datetime.now().strftime('%Y-m%m-d%d-t%Hh_%Mm_%Ss')
     current_tmux_session = os.environ.get("TMUX", "").split(",")[-1]
-    run_name = f'beyond scale: {path} ({today=} ({name=}) {data_mixture_name=} {probabilities=} {pretrained_model_name_or_path=} {data_files=} {max_steps=} {batch_size=} {num_tokens_trained=} {gradient_accumulation_steps=} {optim=} {learning_rate=} {max_length=} {weight_decay=} {warmup_ratio=} {CUDA_VISIBLE_DEVICES=} {current_tmux_session=})'
+    run_name = f'beyond scale: {path} ({today=} ({name=}) {data_mixture_name=} {probabilities=} {pretrained_model_name_or_path=} {data_files=} {max_steps=} {batch_size=} {num_tokens_trained=} {gradient_accumulation_steps=} {optim=} {learning_rate=} {max_length=} {weight_decay=} {warmup_ratio=} {CUDA_VISIBLE_DEVICES=} {current_tmux_session=} {num_rows_according_to_tok_count=})'
     print(f'\n---> {run_name=}\n')
     # - init wandb
     debug: bool = mode == 'dryrun'  # BOOL, debug?
     run = wandb.init(mode=mode, project="beyond-scale", name=run_name, save_code=True)
     print(f'{run.url=}')
-    wandb.config.update({"path": path, "name": name, "today": today, 'probabilities': probabilities, 'batch_size': batch_size, 'debug': debug, 'data_mixture_name': data_mixture_name, 'streaming': streaming, 'data_files': data_files, 'seed': seed, 'pretrained_model_name_or_path': pretrained_model_name_or_path, 'num_epochs': num_epochs, 'gradient_accumulation_steps': gradient_accumulation_steps, 'CUDA_VISIBLE_DEVICES': CUDA_VISIBLE_DEVICES, "current_tmux_session": current_tmux_session})
+    wandb.config.update({"path": path, "name": name, "today": today, 'probabilities': probabilities, 'batch_size': batch_size, 'debug': debug, 'data_mixture_name': data_mixture_name, 'streaming': streaming, 'data_files': data_files, 'seed': seed, 'pretrained_model_name_or_path': pretrained_model_name_or_path, 'num_epochs': num_epochs, 'gradient_accumulation_steps': gradient_accumulation_steps, 'CUDA_VISIBLE_DEVICES': CUDA_VISIBLE_DEVICES, "current_tmux_session": current_tmux_session, 'num_rows_according_to_tok_count': num_rows_according_to_tok_count})
     # run.notify_on_failure() # https://community.wandb.ai/t/how-do-i-set-the-wandb-alert-programatically-for-my-current-run/4891
     output_dir = Path(f'~/data/results_{today}/').expanduser() if not debug else Path(f'~/data/results/').expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -230,11 +232,9 @@ def train():
     print(f'{probabilities=}')
     # - Get raw train data set
     raw_train_datasets = interleave_datasets(train_datasets, probabilities)
-    current_dataset_size = 4000
-    raw_train_datasets_subset = get_data_from_hf_dataset2(raw_train_datasets, streaming, batch_size=current_dataset_size)
-    # TODO: once we've figured out how to take only from the indices we want (assuming idx_min is computed), then going forward the data set will only train on that num of tokens
-    lm_train_dataset = raw_dataset_2_lm_data(raw_train_datasets_subset, tokenizer, block_size)
+    lm_train_dataset = raw_dataset_2_lm_data(raw_train_datasets, tokenizer, block_size)
     train_dataset = lm_train_dataset
+    lm_train_dataset = lm_train_dataset.take(num_rows_according_to_tok_count)  # not using get_data_from_hf_dataset because we don't know if it respect getting the first n rows
 
     # -- max steps manually decided depending on how many tokens we want to train on
     per_device_train_batch_size = batch_size
