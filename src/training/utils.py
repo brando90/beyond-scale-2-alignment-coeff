@@ -14,7 +14,7 @@ from typing import Optional, Any
 import torch
 
 import datasets
-from datasets import load_dataset, interleave_datasets
+from datasets import load_dataset, interleave_datasets, IterableDataset
 
 from transformers import PreTrainedTokenizer, AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, AutoConfig
 from transformers.testing_utils import CaptureLogger
@@ -577,6 +577,32 @@ def _test_log_trainer():
     trainer = Trainer(model=model, args=eval_args, train_dataset=None, eval_dataset=eval_dataset)
     trainer.log_metrics(f"eval_{name}", metrics)  # display metrics
 
+def _test_get_subset_with_streaming():
+    """
+    I have an iterable hugging face (HF) data set (in streaming mode is True) and I want to get the first 8 data points in order (not any random 8). 
+    I will use these 8 data points as the input to the HF trainer, so it needs to be in the right HF data set object. Then I am calling trainer.train().  
+    How do I do this so I get the first 8 data points?
+
+    > from docs:
+        Create a new [`IterableDataset`] with only the first `n` elements.
+    """
+    streaming = True
+    # path, name, data_files, split = ['c4'], ['en'], [None], ['train']
+    path, name, data_file, split = 'c4', 'en', None, 'train'
+    check_all_equal = [[] for i in range(4)]
+    for i in range(4):
+        ds: IterableDataset = load_dataset(path, name, data_files=data_file, streaming=streaming, split=split).with_format("torch")
+        susbet_dataset = ds.take(2)
+        for seq in susbet_dataset:
+            print(f"{seq=}")
+            check_all_equal[i].append(seq)
+        print()
+    # 
+    for i in range(4):
+        for j in range(4):
+            assert check_all_equal[i] == check_all_equal[j], f'Err: lists not equal at {i=}, {j=}'
+    print('done!')
+
 if __name__ == "__main__":
     from time import time
     start_time = time()
@@ -584,5 +610,6 @@ if __name__ == "__main__":
     # _test_train_dataset_setup_for_main_code()
     # _test_expt_planning()
     # _test_utils_padding_and_eos()
-    _test_log_trainer()
+    # _test_log_trainer()
+    _test_get_subset_with_streaming()
     print(f"Done!\a Total time: {time() - start_time} seconds, or {(time() - start_time)/60} minutes. or {(time() - start_time)/60/60} hours.\a")
