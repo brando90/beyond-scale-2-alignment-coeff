@@ -29,6 +29,7 @@ import datasets
 from datasets import load_dataset, interleave_datasets
 import torch
 from transformers import GPT2LMHeadModel, PreTrainedTokenizer, AutoTokenizer, Trainer, TrainingArguments, AutoConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 
 import sys
@@ -51,8 +52,8 @@ def train():
     from datasets import load_dataset, interleave_datasets
     import torch
     import transformers
-    from transformers import PreTrainedTokenizer
     from transformers import GPT2LMHeadModel, PreTrainedTokenizer, AutoTokenizer, Trainer, TrainingArguments, AutoConfig
+    from transformers import AutoTokenizer, AutoModelForCausalLM
     import random
     import math
     import os
@@ -102,9 +103,11 @@ def train():
     # pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
     # pretrained_model_name_or_path = 'baby_llama2_v1'
     # pretrained_model_name_or_path = 'get_full_llama7b_reinit'
+    pretrained_model_name_or_path = 'google/gemma-2b'  # https://huggingface.co/google/gemma-2b
+    # pretrained_model_name_or_path = 'google/gemma-7b'  # https://huggingface.co/google/gemma-7b
     print(f'{pretrained_model_name_or_path=}')
     # - important training details or it wont run, mem issues maybe
-    max_steps = 2
+    max_steps = 1
     # max_steps = ? # --> number of steps for fair token comparison for each data set
     # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
     # max_steps = 1_553  # 22-24hs llama2 full reinit 4*8=32=B 1024=L for 6.3M tokens
@@ -129,6 +132,7 @@ def train():
     # batch_size, gradient_accumulation_steps = 5, 6  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     # batch_size, gradient_accumulation_steps = 4, 6  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
+    # batch_size, gradient_accumulation_steps = 1, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     # batch_size, gradient_accumulation_steps = 4, 16
     learning_rate=1e-4
     # learning_rate=1e-5
@@ -211,6 +215,27 @@ def train():
         model = model.to(torch_dtype)
         block_size: int = max_length
         print(f'{block_size=}')
+    elif 'gemma' in pretrained_model_name_or_path:
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
+        torch_dtype = torch.bfloat16 if torch.cuda.get_device_capability(torch.cuda.current_device())[0] >= 8 else torch.float32 # if >= 8 ==> brain float 16 available or set to True if you always want fp32
+        model: AutoModelForCausalLM = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, device_map="auto", torch_dtype=torch_dtype)
+        # input_text = "Write me a poem about Machine Learning."
+        # input_ids = tokenizer(input_text, return_tensors="pt").to("cuda")
+        # outputs = model.generate(**input_ids)
+        # print(tokenizer.decode(outputs[0]))
+        tokenizer.pad_token = tokenizer.eos_token if tokenizer.pad_token_id is None else tokenizer.pad_token  
+        print(f'{tokenizer.pad_token=} {tokenizer.eos_token_id=}')
+        # get context length for setting max length for training
+        if hasattr(model.config, "context_length"):
+            # seems gemma model doesn't have this available issue: https://huggingface.co/google/gemma-2b/discussions/32
+            print("Context length:", model.config.context_length)
+            max_length = model.config.context_length
+        else:
+            # Table 1. Models are trained on a context length of 8192 tokens. ref: https://storage.googleapis.com/deepmind-media/gemma/gemma-report.pdf
+            # max_length = 8192
+            print(f'{max_length=}')
+        block_size: int = max_length
+        print(f'{block_size=}')
     print("Number of parameters:", sum(p.numel() for p in model.parameters()))
     print(f"Total weight norm: {get_weight_norms(model)=}")
     print(f'{torch.cuda.device_count()=} (makes sure GPUs are visible and accesible to Pytorch.)')
@@ -220,9 +245,10 @@ def train():
     print(f'vocab_size: {len(tokenizer)=} \nExpected random loss: {math.log(len(tokenizer))=}')
     print(f"CUDA version: {torch.version.cuda=}")
     print(f'{output_dir=}')
-    eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2, print_str='> Eval OpenWebtext rand mdl')
-    eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2, print_str='> Eval C4 rand mdl')
-    eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2,  print_str='> Eval wikitext rand mdl')
+    eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2, print_str='> Eval OpenWebtext mdl')
+    eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2, print_str='> Eval C4 mdl')
+    eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=2,  print_str='> Eval wikitext mdl')
+    eval_hf_with_subsample('UDACA/AF', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=2,  print_str='> Eval AF mdl')
     
     # --- Load datasets
     # -- Get train data set
@@ -303,20 +329,29 @@ def train():
     # # metrics = eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=8)
     # # print(f'Wikitext (8 val samples): {metrics=}')
 
-    # -- Eval whole datasets
+    # -- Eval whole datasetsNone
+    print('---- Evaluate model on Whole AF test')
+    eval_hf_with_subsample('UDACA/AF', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # print('---- Evaluate model on Whole ProofNet test')
+    # eval_hf_with_subsample('UDACA/proofnet', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # print('---- Evaluate model on Whole MiniF2F test')
+    # eval_hf_with_subsample('UDACA/mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # print('---- Evaluate model on Whole ProofNet + MiniF2F test')
+    # eval_hf_with_subsample('UDACA/proofnet-mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+
     print('---- Evaluate model on Whole OpenWebtext')
-    metrics = eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    metrics = eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
     print(f'OpenWebtext whole: {metrics=}')
     # c4 evals first in case of errors
     print('---- Evaluate model on C4')
-    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=8)
+    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
     print(f'C4 (8 val samples): {metrics=}')
     print('---- Evaluate model on Whole C4')
-    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
     print(f'C4 whole: {metrics=}')
-    # print('---- Evaluate model on Whole wikitext-103-v1')
-    # metrics = eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=None)
-    # print(f'Wikitext whole: {metrics=}')
+    print('---- Evaluate model on Whole wikitext-103-v1')
+    metrics = eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
+    print(f'Wikitext whole: {metrics=}')
     
     # -- Print config to show in log what this run was especially data set
     print(f'{wandb.config=}')

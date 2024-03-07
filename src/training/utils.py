@@ -238,7 +238,7 @@ def group_texts(examples, # if batched=True it's a dict of input_ids, attention_
     # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
     # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map    
     """
-    # Concatenate all texts.
+    # Concatenate all texts, usually 1000 since batched=True leads to len(examples['input_ids']) = 1000
     concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
     total_length = len(concatenated_examples[list(examples.keys())[0]])
     # We drop the small remainder, and if the total_length < block_size  we exclude this batch and return an empty dict.
@@ -381,6 +381,7 @@ def eval_hf_with_subsample(path, name, split, model, tokenizer, block_size, outp
                            streaming: bool = True, 
                            verbose: bool = True,
                            print_str: Optional[str] = None,
+                           per_device_eval_batch_size: int = 1,  # recommended size is the train batch size you are using, since if the trainer.trian() worked with no OMM issues, likely trainer.evaluate() will work too with same batch size
                            ):
     eval_dataset = load_dataset(path, name, streaming=streaming, split=split).with_format("torch") 
     eval_dataset2 = raw_dataset_2_lm_data(eval_dataset, tokenizer, block_size)
@@ -389,7 +390,7 @@ def eval_hf_with_subsample(path, name, split, model, tokenizer, block_size, outp
     else:
         eval_batch2 = eval_dataset2.take(max_eval_samples)
     print(f'Saving eval results at: {output_dir=}') # The output directory where the model predictions and checkpoints will be written.
-    eval_args = TrainingArguments(output_dir=output_dir, fp16=False, bf16=torch.cuda.get_device_capability(torch.cuda.current_device())[0] >= 8)
+    eval_args = TrainingArguments(output_dir=output_dir, per_device_eval_batch_size=per_device_eval_batch_size, fp16=False, bf16=torch.cuda.get_device_capability(torch.cuda.current_device())[0] >= 8)
     trainer = Trainer(model=model, args=eval_args, train_dataset=None, eval_dataset=eval_batch2)
     metrics = eval_hf(trainer, path, name, split,)
     if verbose:
