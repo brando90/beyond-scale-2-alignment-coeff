@@ -39,8 +39,8 @@ tmux new -s 1
 reautexport CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')h
 
 source $AFS/.bashrc
-conda activate beyond_scale
-export CUDA_VISIBLE_DEVICES=1
+conda activate align_coeff
+export CUDA_VISIBLE_DEVICES=3
 echo CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')
 echo CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES
@@ -51,14 +51,14 @@ echo $HF_TOKEN
 # python ~/beyond-scale-language-data-diversity/src/diversity/div_coeff.py
 
 export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')
-python ~/beyond-scale-language-data-diversity/src/training/train.py
+python ~/beyond-scale-2-alignment-coeff/src/training/train.py
 
 # export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')
 # python ~/beyond-scale-language-data-diversity/src/diversity/embeddings/div_act_based.py
 
 
-export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')
-python ~/beyond-scale-language-data-diversity/src/training/eval.py
+# export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -k2 -nr | head -n 1 | awk -F ', ' '{print $1}')
+# python ~/beyond-scale-language-data-diversity/src/training/eval.py
 
 # -- other option is to run `echo $SU_PASSWORD | /afs/cs/software/bin/reauth` inside of python, right?
 export JOB_PID=$!

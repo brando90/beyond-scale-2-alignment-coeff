@@ -84,8 +84,8 @@ def train():
     # -- Setup wandb
     import wandb
     # - Dryrun
-    mode = 'dryrun'; seed = 0; report_to = 'none'
-    # mode = 'online'; seed = 0; report_to = 'wandb'
+    # mode = 'dryrun'; seed = 0; report_to = 'none'
+    mode = 'online'; seed = 0; report_to = 'wandb'
 
     # -- Train data sets
     # path, name, data_files, split = ['c4'], ['en'], [None], ['train']
@@ -107,8 +107,11 @@ def train():
     # pretrained_model_name_or_path = 'google/gemma-7b'  # https://huggingface.co/google/gemma-7b
     print(f'{pretrained_model_name_or_path=}')
     # - important training details or it wont run, mem issues maybe
-    max_steps = 1
+    # max_steps = 1
+    # max_steps = 4
+    max_steps = 433
     # max_steps = ? # --> number of steps for fair token comparison for each data set
+    # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
     # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
     # max_steps = 1_553  # 22-24hs llama2 full reinit 4*8=32=B 1024=L for 6.3M tokens
     # max_steps = 3_000  # 2.75729 days rate=79.41secs/it toks=49.1M
@@ -134,7 +137,7 @@ def train():
     batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     # batch_size, gradient_accumulation_steps = 1, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     # batch_size, gradient_accumulation_steps = 4, 16
-    learning_rate=1e-4
+    learning_rate=1e-5
     # learning_rate=1e-5
     optim='paged_adamw_32bit'
     # optim = 'adafactor'
@@ -156,11 +159,11 @@ def train():
     print(f'{num_tokens_trained=}')
     today = datetime.datetime.now().strftime('%Y-m%m-d%d-t%Hh_%Mm_%Ss')
     current_tmux_session = os.environ.get("TMUX", "").split(",")[-1]
-    run_name = f'beyond scale: {path} ({today=} ({name=}) {data_mixture_name=} {probabilities=} {pretrained_model_name_or_path=} {data_files=} {max_steps=} {batch_size=} {num_tokens_trained=} {gradient_accumulation_steps=} {optim=} {learning_rate=} {max_length=} {weight_decay=} {warmup_ratio=} {CUDA_VISIBLE_DEVICES=} {current_tmux_session=} {num_rows_according_to_tok_count=})'
+    run_name = f'beyond scale2-align: {path} ({today=} ({name=}) {data_mixture_name=} {probabilities=} {pretrained_model_name_or_path=} {data_files=} {max_steps=} {batch_size=} {num_tokens_trained=} {gradient_accumulation_steps=} {optim=} {learning_rate=} {max_length=} {weight_decay=} {warmup_ratio=} {CUDA_VISIBLE_DEVICES=} {current_tmux_session=} {num_rows_according_to_tok_count=})'
     print(f'\n---> {run_name=}\n')
     # - init wandb
     debug: bool = mode == 'dryrun'  # BOOL, debug?
-    run = wandb.init(mode=mode, project="beyond-scale", name=run_name, save_code=True)
+    run = wandb.init(mode=mode, project="beyond-scale2-align", name=run_name, save_code=True)
     print(f'{run.url=}')
     wandb.config.update({"path": path, "name": name, "today": today, 'probabilities': probabilities, 'batch_size': batch_size, 'debug': debug, 'data_mixture_name': data_mixture_name, 'streaming': streaming, 'data_files': data_files, 'seed': seed, 'pretrained_model_name_or_path': pretrained_model_name_or_path, 'num_epochs': num_epochs, 'gradient_accumulation_steps': gradient_accumulation_steps, 'CUDA_VISIBLE_DEVICES': CUDA_VISIBLE_DEVICES, "current_tmux_session": current_tmux_session, 'num_rows_according_to_tok_count': num_rows_according_to_tok_count})
     # run.notify_on_failure() # https://community.wandb.ai/t/how-do-i-set-the-wandb-alert-programatically-for-my-current-run/4891
@@ -330,28 +333,28 @@ def train():
     # # print(f'Wikitext (8 val samples): {metrics=}')
 
     # -- Eval whole datasetsNone
+    print('---- Evaluate model on 4 AF test')
+    eval_hf_with_subsample('UDACA/AF', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None, per_device_eval_batch_size=4)
     print('---- Evaluate model on Whole AF test')
-    eval_hf_with_subsample('UDACA/AF', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    eval_hf_with_subsample('UDACA/AF', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None, per_device_eval_batch_size=batch_size)
     # print('---- Evaluate model on Whole ProofNet test')
-    # eval_hf_with_subsample('UDACA/proofnet', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # eval_hf_with_subsample('UDACA/proofnet', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None, per_device_eval_batch_size=batch_size)
     # print('---- Evaluate model on Whole MiniF2F test')
-    # eval_hf_with_subsample('UDACA/mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # eval_hf_with_subsample('UDACA/mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None, per_device_eval_batch_size=batch_size)
     # print('---- Evaluate model on Whole ProofNet + MiniF2F test')
-    # eval_hf_with_subsample('UDACA/proofnet-mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None)
+    # eval_hf_with_subsample('UDACA/proofnet-mini-f2f-lean4', 'default', 'test', model, tokenizer, block_size, output_dir, max_eval_samples=None, per_device_eval_batch_size=batch_size)
 
-    print('---- Evaluate model on Whole OpenWebtext')
-    metrics = eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
-    print(f'OpenWebtext whole: {metrics=}')
-    # c4 evals first in case of errors
+    # c4 evals first in case of errors 
+    # max_eval_samples = None  # uses all eval data set
+    max_eval_samples: int = 128
     print('---- Evaluate model on C4')
-    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
-    print(f'C4 (8 val samples): {metrics=}')
-    print('---- Evaluate model on Whole C4')
-    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
-    print(f'C4 whole: {metrics=}')
-    print('---- Evaluate model on Whole wikitext-103-v1')
-    metrics = eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=512)
-    print(f'Wikitext whole: {metrics=}')
+    metrics = eval_hf_with_subsample('c4', 'en', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=max_eval_samples, per_device_eval_batch_size=batch_size)
+    print(f'C4 ({max_eval_samples} val samples): {metrics=}')
+    print(f'OpenWebtext whole: {metrics=}')
+    metrics = eval_hf_with_subsample('UDACA/pile_openwebtext2', None, 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=max_eval_samples, per_device_eval_batch_size=batch_size)
+    print('---- Evaluate model on wikitext-103-v1')
+    metrics = eval_hf_with_subsample('wikitext', 'wikitext-103-v1', 'validation', model, tokenizer, block_size, output_dir, max_eval_samples=max_eval_samples, per_device_eval_batch_size=batch_size)
+    print(f'Wikitext {max_eval_samples}: {metrics=}')
     
     # -- Print config to show in log what this run was especially data set
     print(f'{wandb.config=}')
