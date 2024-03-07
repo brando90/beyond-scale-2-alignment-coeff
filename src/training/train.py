@@ -84,7 +84,7 @@ def train():
     # -- Setup wandb
     import wandb
     # - Dryrun
-    # mode = 'dryrun'; seed = 0; report_to = 'none'
+    mode = 'dryrun'; seed = 0; report_to = 'none'
     mode = 'online'; seed = 0; report_to = 'wandb'
 
     # -- Train data sets
@@ -103,8 +103,8 @@ def train():
     # pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
     # pretrained_model_name_or_path = 'baby_llama2_v1'
     # pretrained_model_name_or_path = 'get_full_llama7b_reinit'
-    pretrained_model_name_or_path = 'google/gemma-2b'  # https://huggingface.co/google/gemma-2b
-    # pretrained_model_name_or_path = 'google/gemma-7b'  # https://huggingface.co/google/gemma-7b
+    # pretrained_model_name_or_path = 'google/gemma-2b'  # https://huggingface.co/google/gemma-2b
+    pretrained_model_name_or_path = 'google/gemma-7b'  # https://huggingface.co/google/gemma-7b
     print(f'{pretrained_model_name_or_path=}')
     # - important training details or it wont run, mem issues maybe
     # max_steps = 1
@@ -136,7 +136,7 @@ def train():
     # batch_size, gradient_accumulation_steps = 4, 6  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
     # batch_size, gradient_accumulation_steps = 1, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 4, 16
+    batch_size, gradient_accumulation_steps = 1, 30
     learning_rate=1e-5
     # learning_rate=1e-5
     optim='paged_adamw_32bit'
