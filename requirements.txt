@@ -6,7 +6,7 @@ antlr4-python3-runtime==4.8
 appdirs==1.4.4
 async-timeout==4.0.3
 attrs==23.2.0
--e git+https://github.com/brando90/beyond-scale-2-alignment-coeff.git@5259f856ba6ae4bc96793afe6d8773f38a4247c0#egg=beyond_scale_2_alignment_coeff
+
 bitarray==2.9.2
 bitsandbytes==0.42.0
 certifi==2024.2.2
