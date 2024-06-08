@@ -1,4 +1,4 @@
-# A Systematic Study of the Role of Data Quality and Alignment for Fine-tuning LLMs for Enhanced Autoformalization (beyond-scale2-alignment-coeff)
+# A Systematic Study of the Role of Data Quality and Alignment for Fine-tuning LLMs for Enhanced Autoformalization
 
 Paper link here: [A Systematic Study of the Role of Data Quality and Alignment for Fine-tuning LLMs for Enhanced Autoformalization - Krrish Chawla, Aryan Sahai, Mario DePavia, Brando Miranda](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=_NQJoBkAAAAJ&sortby=pubdate&citation_for_view=_NQJoBkAAAAJ:r0BpntZqJG4C)
 
