@@ -7,7 +7,7 @@ from accelerate import Accelerator
 from itertools import chain
 
 
-hf_token = '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'
+hf_token = ''
 #model_name = "meta-llama/Meta-Llama-3-8B"
 #model_name = "gpt2"
 model_name = "mistralai/Mistral-7B-v0.3"
