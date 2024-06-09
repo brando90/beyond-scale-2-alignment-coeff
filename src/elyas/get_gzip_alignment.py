@@ -4,7 +4,7 @@ import gzip
 import io
 import time
 
-hf_token = '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'
+hf_token = ''
 
 def compress(data: str) -> int:
     """Compresses the input data using gzip and returns the size of the compressed data."""
