@@ -7,7 +7,7 @@ from tqdm import tqdm
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the tokenizer and model
-hf_token = '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'
+hf_token = ''
 
 # Define the paths to the saved model
 #model_name = "meta-llama/Meta-Llama-3-8B"
