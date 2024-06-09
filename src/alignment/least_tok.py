@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer
 from datasets import load_dataset
 
-hf_token = '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'
+hf_token = ''
 
 # Load Llama3 tokenizer
 model_name = "meta-llama/Meta-Llama-3-8B"
