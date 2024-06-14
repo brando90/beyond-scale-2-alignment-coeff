@@ -97,61 +97,19 @@ def train():
     num_rows_according_to_tok_count: int = 4
     # - models
     pretrained_model_name_or_path = 'gpt2'  # this is the smallest model gpt2, 124M params https://huggingface.co/gpt2 
-    # pretrained_model_name_or_path = 'meta-llama/Llama-2-7b-hf'
-    # pretrained_model_name_or_path = 'meta-llama/Llama-2-13b-hf'
-    # pretrained_model_name_or_path = 'meta-llama/Llama-2-70b-hf'
-    # pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
-    # pretrained_model_name_or_path = 'baby_llama2_v1'
-    # pretrained_model_name_or_path = 'get_full_llama7b_reinit'
-    # pretrained_model_name_or_path = 'google/gemma-2b'  # https://huggingface.co/google/gemma-2b
-    pretrained_model_name_or_path = 'google/gemma-7b'  # https://huggingface.co/google/gemma-7b
-    print(f'{pretrained_model_name_or_path=}')
-    # - important training details or it wont run, mem issues maybe
-    # max_steps = 1
-    # max_steps = 4
     max_steps = 433
-    # max_steps = ? # --> number of steps for fair token comparison for each data set
-    # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
-    # max_steps = 866 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32
-    # max_steps = 1_553  # 22-24hs llama2 full reinit 4*8=32=B 1024=L for 6.3M tokens
-    # max_steps = 3_000  # 2.75729 days rate=79.41secs/it toks=49.1M
-    # max_steps = 30_000 # 27.5729 days rate=79.41secs/it toks=491M
-    # max_steps = 300_000 # 275.729 days rate=79.41secs/it toks=
-    # max_steps = 5_000
-    # max_steps = 61_036  # 3.8 days for B=32 L=512 rate=5.43secs/it for 1B=1e9tokens
-    # max_steps = 78_853 # 4.6 days L=512 B=32 r=5.43 ~1.21B 29,999MiB
-    # max_steps = 30_517  # 11 days 1B L=512 B=32 r=31.31
-    # max_steps = 1_761 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 5, 6 0.2168M tokens
-    # max_steps = 19_073 # <- CHANGE THIS  11 days with baby llama2 v1 36m 1, 32
-    # max_steps = 306_000 # <- CHANGE THIS 12hs with with baby llama2 v1 36m 1, 32 35.1 tokens
     max_length = 4096
-    # max_length = 1024
-    # max_length = 512
-    # max_length = 256
     num_batches=1
     # single gpu
-    # batch_size, gradient_accumulation_steps = 1, 32  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 6, 5  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 5, 6  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 4, 6  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
+    
     batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 1, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    batch_size, gradient_accumulation_steps = 1, 30
+
     learning_rate=1e-5
-    # learning_rate=1e-5
     optim='paged_adamw_32bit'
-    # optim = 'adafactor'
     weight_decay=0.1
     warmup_ratio=0.01
     lr_scheduler_type='cosine'  # work as training argument
-    # lr_scheduler_type='constant_with_warmup'  # work as training argument``
-    # lr_scheduler_type='cosine_with_warmup'
-    # lr_scheduler_kwargs={},  # ref: https://huggingface.co/docs/transformers/v4.37.0/en/main_classes/optimizer_schedules#transformers.SchedulerType 
-    # -- multiple gpus 3 4096 context len
-    # batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # gradient_checkpointing = False
     gradient_checkpointing = True
-    print(f'{batch_size=} {gradient_accumulation_steps=} {gradient_checkpointing=} {num_epochs=}')
     # -- Wandb
     CUDA_VISIBLE_DEVICES = os.environ.get('CUDA_VISIBLE_DEVICES')
     print(f"CUDA_VISIBLE_DEVICES = {CUDA_VISIBLE_DEVICES}")
@@ -175,20 +133,6 @@ def train():
 
     # -- Load model and tokenizer  
     print(f'{pretrained_model_name_or_path=}')
-    if pretrained_model_name_or_path == 'gpt2':
-        from transformers import GPT2Tokenizer, GPT2LMHeadModel
-        tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path)
-        if tokenizer.pad_token_id is None:
-            tokenizer.pad_token = tokenizer.eos_token
-            print(f'{tokenizer.pad_token=}')
-        print(f'{tokenizer.eos_token=}')
-        print(f'{tokenizer.eos_token_id=}')
-        model = GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path)
-        device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
-        model = model.to(device)
-        block_size: int = tokenizer.model_max_length
-        print(f'{block_size=}')
-        print()
     elif 'Llama-2' in pretrained_model_name_or_path or 'Mistral' in pretrained_model_name_or_path:
         # - LLama2, later qlora: https://github.com/artidoro/qlora/blob/7f4e95a68dc076bea9b3a413d2b512eca6d004e5/qlora.py#L347C13-L347C13
         from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer

@@ -163,7 +163,7 @@ class T5TokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual((2, 9), batch.input_ids.shape)
         self.assertEqual((2, 9), batch.attention_mask.shape)
 
-    def test_empty_target_text(self):
+    def test_empty_tar(self):
         tokenizer = self.t5_base_tokenizer
         src_text = ["A long paragraph for summarization.", "Another paragraph for summarization."]
         batch = tokenizer(src_text, padding=True, return_tensors=FRAMEWORK)

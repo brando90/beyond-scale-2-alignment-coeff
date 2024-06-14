@@ -27,7 +27,17 @@ from datasets import load_dataset, interleave_datasets
 import torch
 from transformers import GPT2LMHeadModel, PreTrainedTokenizer, AutoTokenizer, Trainer, TrainingArguments, AutoConfig
 import math
-
+import datetime
+from pathlib import Path
+import datasets
+from datasets import load_dataset, interleave_datasets
+import torch
+import transformers
+from transformers import PreTrainedTokenizer
+from transformers import GPT2LMHeadModel, PreTrainedTokenizer, AutoTokenizer, Trainer, TrainingArguments, AutoConfig
+import random
+import math
+import os
 
 # -- Experiments 
 
@@ -35,20 +45,7 @@ def train():
     """
     I decided to make the string data close to context length of llama2 7B 4096 tokens.
     So if any string is shorter, the tokenize will padd it according to Claude.
-    
     """
-    # feel free to move the import statements if you want, sometimes I like everything in one place so I can easily copy-paste it into a script
-    import datetime
-    from pathlib import Path
-    import datasets
-    from datasets import load_dataset, interleave_datasets
-    import torch
-    import transformers
-    from transformers import PreTrainedTokenizer
-    from transformers import GPT2LMHeadModel, PreTrainedTokenizer, AutoTokenizer, Trainer, TrainingArguments, AutoConfig
-    import random
-    import math
-    import os
     buffer_size = 500_000
     probabilities = []
     data_mixture_name = None
@@ -56,7 +53,7 @@ def train():
     data_files = [None]
     seed = 0
     split = 'train'
-    max_length = 1024  # gpt2 context length
+    max_length = 4096  # gpt2 context length
     shuffle = False
     report_to = 'none'  # safest default
     # CHUNK_SIZE = 16_896  # approximately trying to fill the llama2 context length of 4096
@@ -76,8 +73,7 @@ def train():
 
     # - c4 wt single
     path, name, data_files, split = ['csv'], [None], [os.path.expanduser('~/data/maf_data/maf_textbooks_csv_v1/train.csv')], ['train']
-    # path, name, data_files, split = ['suolyer/pile_pile-cc'] + ['parquet'] * 4, [None] + ['hacker_news', 'nih_exporter', 'pubmed', 'uspto'], [None] + [urls_hacker_news, urls_nih_exporter, urls_pubmed, urls_uspto], ['validation'] + ['train'] * 4
-    # pretrained_model_name_or_path = 'gpt2'
+
     pretrained_model_name_or_path = 'meta-llama/Llama-2-7b-hf'
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-7b-chat-hf'
     # pretrained_model_name_or_path = 'meta-llama/Llama-2-13b-hf'
@@ -85,15 +81,7 @@ def train():
     pretrained_model_name_or_path = 'mistralai/Mistral-7B-v0.1'
     # - important training details or it wont run, mem issues maybe
     num_epochs = 1
-    # num_epochs = 2
-    # num_epochs = 4
-    # single gpu
-    # batch_size, gradient_accumulation_steps = 2, 1  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    batch_size, gradient_accumulation_steps = 2, 16  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # batch_size, gradient_accumulation_steps = 2, 32  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # -- multiple gpus 3 4096 context len
-    # batch_size, gradient_accumulation_steps = 4, 8  # e.g., choosing large number mabe for stability of training? 4 (per_device_train_batch_size) * 8 (gradient_accumulation_steps), based on alpaca https://github.com/tatsu-lab/stanford_alpaca 
-    # gradient_checkpointing = False
+ 
     gradient_checkpointing = True
     print(f'{batch_size=} {gradient_accumulation_steps=} {gradient_checkpointing=} {num_epochs=}')
     # -- wandb 
@@ -113,18 +101,7 @@ def train():
 
     # -- Load model and tokenizer  
     print(f'{pretrained_model_name_or_path=}')
-    if pretrained_model_name_or_path == 'gpt2':
-        from transformers import GPT2Tokenizer, GPT2LMHeadModel
-        tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path)
-        if tokenizer.pad_token_id is None:
-            tokenizer.pad_token = tokenizer.eos_token
-            print(f'{tokenizer.pad_token=}')
-        print(f'{tokenizer.eos_token=}')
-        print(f'{ tokenizer.eos_token_id=}')
-        model = GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path)
-        device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
-        model = model.to(device)
-    elif 'Llama-2' in pretrained_model_name_or_path or 'Mistral' in pretrained_model_name_or_path:
+    if 'Llama-3' in pretrained_model_name_or_path or 'Mistral' in pretrained_model_name_or_path:
         # - llama2
         from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
         # bf16 or fp32
@@ -318,7 +295,6 @@ def train():
     # print(f'{training_args=}')
     print(f'{pretrained_model_name_or_path=}')
 
-    # TODO: might be nice to figure our how llamav2 counts the number of token's they've trained on
     trainer = Trainer(
         model=model,
         args=training_args,  
@@ -359,10 +335,7 @@ def main():
 
 if __name__ == '__main__':
     print(f'\n\n\n------------------- Running {__file__} -------------------')
-    # -- Run tests and time it
     import time
     time_start = time.time()
-    # -- Run tests
     main()
-    # -- End tests, report how long it took in seconds, minutes, hours, days
     print(f'Time it took to run {__file__}: {time.time() - time_start} seconds, {(time.time() - time_start)/60} minutes, {(time.time() - time_start)/60/60} hours, {(time.time() - time_start)/60/60/24} days\a')
