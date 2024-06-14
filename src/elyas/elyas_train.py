@@ -7,7 +7,7 @@ from itertools import chain
 from accelerate import Accelerator
 
 accelerator = Accelerator()
-hf_token = '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'
+hf_token = ''
 model_name = "mistralai/Mistral-7B-v0.3"
 tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
 tokenizer.pad_token = tokenizer.eos_token
